@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #e8e6e1; font-family: "Inter Tight", Helvetica, sans-serif; }
+  a { color: #2557a7; text-decoration: none; }
+  a:hover { color: #1b3f7d; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes barIn { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+  @keyframes panelIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes barOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-10px) scale(.96); } }
+  @keyframes segIn { from { opacity: 0; transform: translateY(6px); filter: blur(1px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes attn { 0%, 100% { box-shadow: 0 8px 24px rgba(15,14,40,.3), 0 0 0 0 rgba(226,72,61,0); } 45% { box-shadow: 0 8px 24px rgba(15,14,40,.3), 0 0 0 7px rgba(226,72,61,.22); } }
+  @keyframes nudge { 0%, 100% { transform: none; } 25% { transform: translateY(-2px); } 60% { transform: translateY(1px); } }
+  @keyframes halo { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.9); opacity: 0; } }
+  @keyframes warnPop { 0% { transform: scale(.7); opacity: 0; } 55% { transform: scale(1.14); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+</style>
+<template id="__bundler_thumbnail" data-bg-color="#141327">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#141327" />
+    <rect x="330" y="300" width="540" height="120" rx="22" fill="#181735" stroke="#34325c" stroke-width="4" />
+    <circle cx="392" cy="360" r="16" fill="#f26a1b" />
+    <rect x="432" y="336" width="240" height="18" rx="9" fill="#ffffff" />
+    <rect x="432" y="368" width="330" height="14" rx="7" fill="#b9b7cd" />
+    <rect x="700" y="340" width="120" height="42" rx="10" fill="#3a3860" />
+  </svg>
+</template>
+</helmet>
+
+<div style="height:100vh;display:flex;flex-direction:column;background:#f1efeb">
+  <sc-if value="{{ controlsOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;background:#141327;display:flex;align-items:center;gap:6px;padding:6px 10px;flex-wrap:wrap;position:relative;z-index:60">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8f8cb5;letter-spacing:.1em;flex:none;margin-right:2px">STATES</span>
+      <sc-for list="{{ states }}" as="s" hint-placeholder-count="8">
+        <div onClick="{{ s.go }}" style="flex:none;border:1px solid #34325c;border-radius:5px;padding:4px 9px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#cfcde4;background:#1e1c3c;cursor:pointer;white-space:nowrap" style-hover="border-color:#6f6ba0;color:#fff">{{ s.label }}</div>
+      </sc-for>
+      <div onClick="{{ toggleLongName }}" title="Try a very long flow name" style="flex:none;border:1px solid #6b4a2a;border-radius:5px;padding:4px 9px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#f4a56b;background:#2a1e18;cursor:pointer;white-space:nowrap" style-hover="color:#fff">{{ longNameLabel }}</div>
+      <div onClick="{{ hideControls }}" title="Hide" style="flex:none;margin-left:auto;padding:3px 8px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#8f8cb5;cursor:pointer" style-hover="color:#fff">HIDE ✕</div>
+    </div>
+  </sc-if>
+    <div style="position:relative;flex:1;overflow:hidden;background:#f1efeb">
+      <sc-if value="{{ controlsClosed }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ showControls }}" title="Show states" style="position:absolute;left:10px;top:10px;z-index:70;display:flex;align-items:center;gap:6px;background:#141327;color:#cfcde4;border-radius:6px;padding:4px 9px;font-size:10px;font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;cursor:pointer;box-shadow:0 4px 14px rgba(15,14,40,.25)" style-hover="color:#fff">STATES ⌄</div>
+      </sc-if>
+
+      <div style="position:absolute;inset:0;overflow-y:auto">
+        <div style="background:#fff;border-bottom:1px solid #e6e3de;height:64px;display:flex;align-items:center;gap:22px;padding:0 26px">
+          <div style="width:34px;height:34px;border-radius:7px;background:#1b4c8c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">n</div>
+          <div style="position:relative;width:300px">
+            <div style="display:flex;align-items:center;gap:9px;background:#eef1f4;border-radius:6px;padding:8px 12px">
+              <div style="width:11px;height:11px;border:1.6px solid #6b7280;border-radius:50%"></div>
+              <span style="font-size:13px;color:#6b7280">Search</span>
+            </div>
+            <sc-if value="{{ onStep1 }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="position:absolute;inset:-6px;border:2px solid #f26a1b;border-radius:9px;pointer-events:none;box-shadow:0 0 0 4px rgba(242,106,27,.2)"></div>
+                <div style="position:absolute;left:0;top:calc(100% + 14px);width:270px;background:#fff;border-radius:10px;box-shadow:0 14px 36px rgba(20,18,40,.22);border:1px solid #e7e3dc;padding:16px 16px 14px;z-index:45;animation:segIn 240ms cubic-bezier(.2,.7,.3,1) both">
+                <div style="position:absolute;left:26px;top:-7px;width:12px;height:12px;background:#fff;border-left:1px solid #e7e3dc;border-top:1px solid #e7e3dc;transform:rotate(45deg)"></div>
+                <div style="font-size:11.5px;font-weight:600;color:#d9600a;letter-spacing:.04em">STEP 1 OF 5</div>
+                <div style="font-size:15px;font-weight:600;color:#1f2328;margin-top:7px">Start here</div>
+                <div style="font-size:13px;color:#5f6672;margin-top:6px;line-height:1.45;text-wrap:pretty">Search for a colleague, task or document to jump straight to it.</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                  <div style="display:flex;gap:5px;align-items:center">
+                    <div style="width:16px;height:4px;border-radius:2px;background:#f26a1b"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <span onClick="{{ askExit }}" style="font-size:12.5px;color:#6b7280;cursor:pointer">Skip</span>
+                    <button onClick="{{ nextStep }}" style="border:none;background:#f26a1b;color:#fff;font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer">Next</button>
+                  </div>
+                </div>
+              </div>
+              </div>
+            </sc-if>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:flex-end;gap:26px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding-bottom:2px;border-bottom:2px solid #1f2328">
+              <div style="width:18px;height:15px;background:#1f2328;clip-path:polygon(50% 0,100% 45%,100% 100%,0 100%,0 45%)"></div>
+              <span style="font-size:12px;color:#1f2328;font-weight:600">Home</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+              <div style="display:flex;gap:2px"><div style="width:8px;height:14px;border-radius:4px;background:#6b7280"></div><div style="width:8px;height:14px;border-radius:4px;background:#9ca3af"></div></div>
+              <span style="font-size:12px;color:#6b7280">Directory</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+              <div style="width:16px;height:13px;border-radius:2px;background:#6b7280"></div>
+              <span style="font-size:12px;color:#6b7280">Tasks</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+              <div style="width:16px;height:13px;border-radius:3px;background:#6b7280"></div>
+              <span style="font-size:12px;color:#6b7280">Messages</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+              <div style="width:13px;height:14px;border-radius:5px 5px 2px 2px;background:#6b7280"></div>
+              <span style="font-size:12px;color:#6b7280">Alerts</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+              <div style="width:16px;height:16px;border-radius:50%;background:#b6bcc4"></div>
+              <span style="font-size:12px;color:#6b7280">Me ▾</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:20px;padding:20px 26px 20px 72px;max-width:1300px;margin:0 auto;align-items:start">
+          <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;overflow:hidden">
+            <div style="height:64px;background:#c8d2cd"></div>
+            <div style="padding:0 16px 16px;text-align:center">
+              <div style="width:66px;height:66px;border-radius:50%;background:#eef1f4;border:3px solid #fff;margin:-33px auto 10px"></div>
+              <div style="font-size:17px;font-weight:600;color:#1f2328">John Smith</div>
+              <div style="font-size:12.5px;color:#6b7280;margin-top:3px">UX Analyst, Northwind</div>
+            </div>
+            <div style="border-top:1px solid #eceae6;padding:14px 16px;display:flex;flex-direction:column;gap:3px">
+              <div style="font-size:12.5px;color:#6b7280">Connections</div>
+              <div style="font-size:13.5px;font-weight:600;color:#1f2328">Grow your network</div>
+            </div>
+            <div style="border-top:1px solid #eceae6;padding:14px 16px;display:flex;flex-direction:column;gap:5px">
+              <div style="font-size:12.5px;color:#6b7280">Access tools &amp; insights</div>
+              <a href="#" style="font-size:13px;font-weight:600">Try Premium free</a>
+            </div>
+            <div style="border-top:1px solid #eceae6;padding:14px 16px;font-size:13px;color:#1f2328">My items</div>
+          </div>
+
+          <div style="min-width:0;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:20px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+                <div style="font-size:21px;font-weight:600;color:#1f2328">Finish setting up your profile</div>
+                <span style="color:#6b7280;font-size:15px">✕</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;margin:16px 0 18px">
+                <div style="flex:1;height:6px;border-radius:3px;background:#eceae6;overflow:hidden">
+                  <div style="width:22%;height:100%;background:#2f7d4f"></div>
+                </div>
+                <span style="font-size:13px;color:#6b7280">1/5 complete</span>
+              </div>
+              <div style="height:210px;border-radius:6px;background:repeating-linear-gradient(45deg,#efece7,#efece7 9px,#e6e2db 9px,#e6e2db 18px);display:flex;align-items:center;justify-content:center">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8b8577;letter-spacing:.04em">illustration / 960×420</span>
+              </div>
+              <div style="font-size:16px;color:#1f2328;margin:18px 0 16px;max-width:520px;text-wrap:pretty">Add your work experience and skills so the right teams can find you.</div>
+              <div style="position:relative;display:inline-block">
+                <button style="border:none;background:#1b4c8c;color:#fff;font-family:inherit;font-size:14.5px;font-weight:600;padding:11px 22px;border-radius:22px;cursor:pointer">Update profile</button>
+                <sc-if value="{{ onStep2 }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <div style="position:absolute;inset:-6px;border:2px solid #f26a1b;border-radius:26px;pointer-events:none;box-shadow:0 0 0 4px rgba(242,106,27,.2)"></div>
+                    <div style="position:absolute;left:0;top:calc(100% + 14px);width:270px;background:#fff;border-radius:10px;box-shadow:0 14px 36px rgba(20,18,40,.22);border:1px solid #e7e3dc;padding:16px 16px 14px;z-index:45;animation:segIn 240ms cubic-bezier(.2,.7,.3,1) both">
+                <div style="position:absolute;left:26px;top:-7px;width:12px;height:12px;background:#fff;border-left:1px solid #e7e3dc;border-top:1px solid #e7e3dc;transform:rotate(45deg)"></div>
+                <div style="font-size:11.5px;font-weight:600;color:#d9600a;letter-spacing:.04em">STEP 2 OF 5</div>
+                <div style="font-size:15px;font-weight:600;color:#1f2328;margin-top:7px">Complete your profile</div>
+                <div style="font-size:13px;color:#5f6672;margin-top:6px;line-height:1.45;text-wrap:pretty">Add your work experience and skills so the right teams can find you.</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                  <div style="display:flex;gap:5px;align-items:center">
+                    <div style="width:16px;height:4px;border-radius:2px;background:#f26a1b"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                    <div style="width:6px;height:4px;border-radius:2px;background:#dcdfe4"></div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <span onClick="{{ askExit }}" style="font-size:12.5px;color:#6b7280;cursor:pointer">Skip</span>
+                    <button onClick="{{ nextStep }}" style="border:none;background:#f26a1b;color:#fff;font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer">Next</button>
+                  </div>
+                </div>
+              </div>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:38px;height:38px;border-radius:50%;background:#eef1f4"></div>
+                <div style="flex:1;border:1px solid #ddd9d2;border-radius:20px;padding:10px 16px;font-size:13.5px;color:#6b7280">Start a post</div>
+              </div>
+              <div style="display:flex;gap:28px;padding-left:4px">
+                <span style="font-size:13px;color:#4b5563">Photo</span>
+                <span style="font-size:13px;color:#4b5563">Video</span>
+                <span style="font-size:13px;color:#4b5563">Event</span>
+                <span style="font-size:13px;color:#4b5563">Write article</span>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px">
+              <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:12px;color:#6b7280;letter-spacing:.04em">OPEN TASKS</div>
+                <div style="font-size:28px;font-weight:600;color:#1f2328">14</div>
+                <div style="font-size:12.5px;color:#2f7d4f">4 due today</div>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:12px;color:#6b7280;letter-spacing:.04em">APPROVALS</div>
+                <div style="font-size:28px;font-weight:600;color:#1f2328">3</div>
+                <div style="font-size:12.5px;color:#6b7280">Awaiting you</div>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:12px;color:#6b7280;letter-spacing:.04em">TEAM UTILISATION</div>
+                <div style="font-size:28px;font-weight:600;color:#1f2328">82%</div>
+                <div style="font-size:12.5px;color:#6b7280">Last 30 days</div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:18px 20px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <div style="font-size:16px;font-weight:600;color:#1f2328">My tasks</div>
+                <a href="#" style="font-size:13px">View all</a>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #eceae6">
+                  <div style="width:16px;height:16px;border:1.6px solid #b7b2a7;border-radius:4px;flex:none"></div>
+                  <div style="flex:1">
+                    <div style="font-size:14px;color:#1f2328">Approve Q3 vendor renewal</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px">Procurement · assigned by Ana Reyes</div>
+                  </div>
+                  <span style="font-size:11.5px;font-weight:600;color:#8a4b00;background:#fdf0dc;padding:4px 9px;border-radius:4px">Due today</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #eceae6">
+                  <div style="width:16px;height:16px;border:1.6px solid #b7b2a7;border-radius:4px;flex:none"></div>
+                  <div style="flex:1">
+                    <div style="font-size:14px;color:#1f2328">Submit August expense report</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px">Finance · 6 receipts attached</div>
+                  </div>
+                  <span style="font-size:11.5px;color:#6b7280">Fri</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 0">
+                  <div style="width:16px;height:16px;border:1.6px solid #b7b2a7;border-radius:4px;flex:none"></div>
+                  <div style="flex:1">
+                    <div style="font-size:14px;color:#1f2328">Review onboarding checklist for new hires</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px">People ops · draft shared</div>
+                  </div>
+                  <span style="font-size:11.5px;color:#6b7280">Next week</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:18px 20px">
+              <div style="font-size:16px;font-weight:600;color:#1f2328;margin-bottom:14px">Recent activity</div>
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;gap:12px">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#eef1f4;flex:none"></div>
+                  <div>
+                    <div style="font-size:13.5px;color:#1f2328"><strong style="font-weight:600">Daniela Schmidt</strong> commented on the warehouse pilot report</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:3px">1d ago</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:12px">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#eef1f4;flex:none"></div>
+                  <div>
+                    <div style="font-size:13.5px;color:#1f2328"><strong style="font-weight:600">Marcus Hale</strong> shared a dashboard with the Ops team</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:3px">2d ago</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:12px">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#eef1f4;flex:none"></div>
+                  <div>
+                    <div style="font-size:13.5px;color:#1f2328"><strong style="font-weight:600">Priya Nair</strong> closed 6 tickets in the support queue</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:3px">3d ago</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:18px 20px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <div style="font-size:16px;font-weight:600;color:#1f2328">Requests this quarter</div>
+                <span style="font-size:12.5px;color:#6b7280">Apr – Aug</span>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:14px;height:130px">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:100%;height:52%;background:#c7d4e6;border-radius:4px 4px 0 0"></div><span style="font-size:11.5px;color:#6b7280">Apr</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:100%;height:68%;background:#c7d4e6;border-radius:4px 4px 0 0"></div><span style="font-size:11.5px;color:#6b7280">May</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:100%;height:44%;background:#c7d4e6;border-radius:4px 4px 0 0"></div><span style="font-size:11.5px;color:#6b7280">Jun</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:100%;height:81%;background:#1b4c8c;border-radius:4px 4px 0 0"></div><span style="font-size:11.5px;color:#6b7280">Jul</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:100%;height:63%;background:#c7d4e6;border-radius:4px 4px 0 0"></div><span style="font-size:11.5px;color:#6b7280">Aug</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:16px 18px">
+              <div style="font-size:15.5px;font-weight:600;color:#1f2328;margin-bottom:12px">Company news</div>
+              <div style="display:flex;flex-direction:column;gap:13px">
+                <div><div style="font-size:13.5px;font-weight:600;color:#1f2328">Q3 planning kickoff moves to Monday</div><div style="font-size:11.5px;color:#6b7280;margin-top:2px">9h ago · 1,264 readers</div></div>
+                <div><div style="font-size:13.5px;font-weight:600;color:#1f2328">New expense policy takes effect</div><div style="font-size:11.5px;color:#6b7280;margin-top:2px">8h ago · 4,246 readers</div></div>
+                <div><div style="font-size:13.5px;font-weight:600;color:#1f2328">Support team adds weekend coverage</div><div style="font-size:11.5px;color:#6b7280;margin-top:2px">11h ago · 2,296 readers</div></div>
+                <div><div style="font-size:13.5px;font-weight:600;color:#1f2328">Warehouse pilot ends ahead of plan</div><div style="font-size:11.5px;color:#6b7280;margin-top:2px">6h ago · 2,214 readers</div></div>
+              </div>
+              <div style="font-size:12.5px;color:#6b7280;margin-top:13px">Show more ⌄</div>
+            </div>
+            <div style="height:230px;border-radius:8px;background:repeating-linear-gradient(45deg,#efece7,#efece7 9px,#e6e2db 9px,#e6e2db 18px);display:flex;align-items:center;justify-content:center;border:1px solid #e6e3de">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8b8577">promo image / 300×230</span>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:16px 18px">
+              <div style="font-size:15.5px;font-weight:600;color:#1f2328;margin-bottom:12px">Upcoming</div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="flex:none;width:38px;text-align:center">
+                    <div style="font-size:11px;color:#6b7280">AUG</div>
+                    <div style="font-size:17px;font-weight:600;color:#1f2328">14</div>
+                  </div>
+                  <div><div style="font-size:13.5px;color:#1f2328">Ops weekly sync</div><div style="font-size:11.5px;color:#6b7280;margin-top:2px">10:00 · 45 min</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="flex:none;width:38px;text-align:center">
+                    <div style="font-size:11px;color:#6b7280">AUG</div>
+                    <div style="font-size:17px;font-weight:600;color:#1f2328">17</div>
+                  </div>
+                  <div><div style="font-size:13.5px;color:#1f2328">New hire onboarding</div><div style="font-size:11.5px;color:#6b7280;margin-top:2px">13:30 · Training room</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="flex:none;width:38px;text-align:center">
+                    <div style="font-size:11px;color:#6b7280">AUG</div>
+                    <div style="font-size:17px;font-weight:600;color:#1f2328">21</div>
+                  </div>
+                  <div><div style="font-size:13.5px;color:#1f2328">Quarterly business review</div><div style="font-size:11.5px;color:#6b7280;margin-top:2px">09:00 · Auditorium</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e6e3de;border-radius:8px;padding:16px 18px">
+              <div style="font-size:15.5px;font-weight:600;color:#1f2328;margin-bottom:12px">People you may know</div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:36px;height:36px;border-radius:50%;background:#eef1f4;flex:none"></div>
+                  <div style="flex:1"><div style="font-size:13.5px;color:#1f2328">Marcus Hale</div><div style="font-size:11.5px;color:#6b7280">Ops Manager</div></div>
+                  <a href="#" style="font-size:12.5px;font-weight:600">Connect</a>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:36px;height:36px;border-radius:50%;background:#eef1f4;flex:none"></div>
+                  <div style="flex:1"><div style="font-size:13.5px;color:#1f2328">Priya Nair</div><div style="font-size:11.5px;color:#6b7280">Support Lead</div></div>
+                  <a href="#" style="font-size:12.5px;font-weight:600">Connect</a>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:36px;height:36px;border-radius:50%;background:#eef1f4;flex:none"></div>
+                  <div style="flex:1"><div style="font-size:13.5px;color:#1f2328">Ana Reyes</div><div style="font-size:11.5px;color:#6b7280">Procurement</div></div>
+                  <a href="#" style="font-size:12.5px;font-weight:600">Connect</a>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:10px;padding:0 4px 8px">
+              <a href="#" style="font-size:12px;color:#6b7280">About</a>
+              <a href="#" style="font-size:12px;color:#6b7280">Accessibility</a>
+              <a href="#" style="font-size:12px;color:#6b7280">Help centre</a>
+              <a href="#" style="font-size:12px;color:#6b7280">Privacy</a>
+              <a href="#" style="font-size:12px;color:#6b7280">Advertising</a>
+              <span style="font-size:12px;color:#9ca3af">Northwind Corp © 2026</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:18px;top:296px;display:flex;align-items:center;gap:10px;z-index:40">
+        <div style="flex:none;height:44px;display:grid;grid-template-columns:repeat(2,3px);grid-template-rows:repeat(3,3px);gap:3px;align-content:center;cursor:default">
+          <div style="width:3px;height:3px;border-radius:50%;background:#a8adb5"></div><div style="width:3px;height:3px;border-radius:50%;background:#a8adb5"></div>
+          <div style="width:3px;height:3px;border-radius:50%;background:#a8adb5"></div><div style="width:3px;height:3px;border-radius:50%;background:#a8adb5"></div>
+          <div style="width:3px;height:3px;border-radius:50%;background:#a8adb5"></div><div style="width:3px;height:3px;border-radius:50%;background:#a8adb5"></div>
+        </div>
+        <div onClick="{{ toggleSelfHelp }}" title="Self Help" style="width:44px;height:44px;border-radius:50%;background:#f26a1b;box-shadow:0 6px 16px rgba(242,106,27,.34);display:grid;place-items:center;cursor:pointer;flex:none;transition:transform 160ms ease" style-hover="transform:scale(1.08)">
+          <div style="width:15px;height:15px;border:2px solid #fff;border-radius:3px;transform:rotate(45deg)"></div>
+        </div>
+        <sc-if value="{{ selfHelpOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;left:66px;top:-8px;width:296px;background:#fff;border:1px solid #e2dfd8;border-radius:10px;box-shadow:0 16px 40px rgba(20,18,40,.18);overflow:hidden;animation:segIn 200ms cubic-bezier(.2,.7,.3,1) both">
+            <div style="background:#f26a1b;color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:14px;font-weight:600">Self Help</span>
+              <span onClick="{{ closeSelfHelp }}" style="cursor:pointer;font-size:14px;color:#ffe3ce">✕</span>
+            </div>
+            <div style="padding:12px 14px 6px">
+              <div style="display:flex;align-items:center;gap:9px;border:1px solid #ddd9d2;border-radius:6px;padding:9px 12px">
+                <div style="position:relative;width:13px;height:13px"><div style="position:absolute;width:9px;height:9px;border:1.6px solid #8b8577;border-radius:50%"></div><div style="position:absolute;left:8px;top:8px;width:5px;height:1.6px;background:#8b8577;transform:rotate(45deg)"></div></div>
+                <span style="font-size:12.5px;color:#8b8577">Search help</span>
+              </div>
+            </div>
+            <div style="padding:6px 6px 10px">
+              <div onClick="{{ playFlow }}" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:7px;cursor:pointer" style-hover="background:#f3f5f8">
+                <div style="position:relative;width:18px;height:18px;flex:none"><div style="position:absolute;left:8px;top:0;width:2px;height:18px;background:#c0510d"></div><div style="position:absolute;left:0;top:2px;width:10px;height:6px;border:1.5px solid #c0510d"></div><div style="position:absolute;left:8px;top:10px;width:10px;height:6px;border:1.5px solid #c0510d"></div></div>
+                <div style="flex:1">
+                  <div title="{{ flowName }}" style="font-size:13.5px;color:#1f2328;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ flowName }}</div>
+                  <div style="font-size:11.5px;color:#6b7280;margin-top:2px">Flow · 5 steps</div>
+                </div>
+                <span style="font-size:11.5px;font-weight:600;color:#c0510d">Play</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:7px;cursor:pointer" style-hover="background:#f3f5f8">
+                <div style="width:18px;height:15px;border:1.5px solid #6b7280;border-radius:3px;flex:none;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#6b7280">i</div>
+                <div style="flex:1">
+                  <div style="font-size:13.5px;color:#1f2328">Submit an expense report</div>
+                  <div style="font-size:11.5px;color:#6b7280;margin-top:2px">Article · 2 min read</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:7px;cursor:pointer" style-hover="background:#f3f5f8">
+                <div style="width:18px;height:18px;border:1.5px solid #6b7280;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-left:5px solid #6b7280;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;margin-left:2px"></div></div>
+                <div style="flex:1">
+                  <div style="font-size:13.5px;color:#1f2328">Tour of the new dashboard</div>
+                  <div style="font-size:11.5px;color:#6b7280;margin-top:2px">Video · 1:20</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="position:absolute;left:{{ barLeft }};top:{{ barTop }};right:{{ barRightEdge }};pointer-events:none;display:flex;z-index:55">
+        <sc-if value="{{ barVisible }}" hint-placeholder-val="{{ true }}">
+          <div onMouseEnter="{{ barEnter }}" onMouseLeave="{{ barLeave }}" style="pointer-events:auto;margin:{{ barMargin }};display:flex;align-items:center;gap:10px;white-space:nowrap;flex:none;animation:{{ barAnim }}">
+            <div onMouseDown="{{ startDrag }}" title="Drag to move" style="display:grid;grid-template-columns:repeat(2,3.5px);gap:4px;padding:6px 3px;cursor:{{ dragCursor }};transition:opacity 160ms ease;opacity:{{ handleOpacity }}">
+              <div style="width:3.5px;height:3.5px;border-radius:50%;background:#8C889F"></div><div style="width:3.5px;height:3.5px;border-radius:50%;background:#8C889F"></div>
+              <div style="width:3.5px;height:3.5px;border-radius:50%;background:#8C889F"></div><div style="width:3.5px;height:3.5px;border-radius:50%;background:#8C889F"></div>
+              <div style="width:3.5px;height:3.5px;border-radius:50%;background:#8C889F"></div><div style="width:3.5px;height:3.5px;border-radius:50%;background:#8C889F"></div>
+            </div>
+            <div style="flex:none;display:flex;align-items:stretch;background:#1F1F32;border-radius:10px;box-shadow:0 8px 24px rgba(15,14,40,.32);overflow:hidden;height:48px;animation:{{ barAttn }}">
+              <div style="flex:none;padding:0 16px;display:flex;flex-direction:column;gap:3px;justify-content:center">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <img src="assets/whatfix-mark.png" alt="Whatfix" style="width:16px;height:13px;display:block" />
+                  <span style="font-size:14px;font-weight:600;color:#F2F2F8;line-height:1.15">Preview mode</span>
+                </div>
+                <div style="font-size:13px;color:#8C899F;line-height:1.15">Draft • Ready • Production</div>
+              </div>
+
+              <div style="display:flex;overflow:hidden;transition:max-width 620ms cubic-bezier(.22,1,.36,1),opacity 420ms cubic-bezier(.4,0,.2,1);opacity:{{ segOpacity }};max-width:{{ segMax }}">
+              <sc-if value="{{ isChecking }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:10px;padding:0 20px;border-left:1px solid #434353;flex:none;animation:segIn 480ms cubic-bezier(.22,1,.36,1) both 120ms">
+                  <div style="width:15px;height:15px;border-radius:50%;border:2px solid #434353;border-top-color:#F2F2F8;animation:spin 900ms linear infinite"></div>
+                  <span style="font-size:14px;color:#F2F2F8">Checking this page…</span>
+                  <span onClick="{{ askExit }}" style="color:#6B697B;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;transition:color 160ms ease" style-hover="color:#F2F2F8">✕</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isIssues }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:10px;padding:0 20px;border-left:1px solid #434353;flex:none;animation:segIn 480ms cubic-bezier(.22,1,.36,1) both 120ms">
+                  <div style="display:flex;animation:warnPop 420ms cubic-bezier(.2,.8,.3,1) both 120ms"><svg width="16" height="15" viewBox="0 0 16 15" style="flex:none;display:block"><path d="M6.98 1.42a1.18 1.18 0 0 1 2.04 0l6.34 11.06c.45.79-.11 1.77-1.02 1.77H1.66c-.91 0-1.47-.98-1.02-1.77z" fill="#F6566B"></path><rect x="7.2" y="5.1" width="1.6" height="4.3" rx=".8" fill="#fff"></rect><rect x="7.2" y="10.4" width="1.6" height="1.7" rx=".8" fill="#fff"></rect></svg></div>
+                  <span style="font-size:14px;color:#F2F2F8">12 of 15 content has issues</span>
+                  <button onClick="{{ diagnose }}" style="margin-left:10px;border:none;background:#3D3C52;color:#F2F2F8;font-family:inherit;font-size:14px;font-weight:500;padding:0 18px;height:28px;border-radius:8px;cursor:pointer" style-hover="background:#4c4a64">Diagnose</button>
+                  <span onClick="{{ askExit }}" style="color:#6B697B;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;transition:color 160ms ease" style-hover="color:#F2F2F8">✕</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isClean }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:10px;padding:0 20px;border-left:1px solid #434353;flex:none;animation:segIn 480ms cubic-bezier(.22,1,.36,1) both 120ms">
+                  <div style="width:18px;height:18px;border-radius:50%;background:#3BB273;display:grid;place-items:center;flex:none;animation:warnPop 420ms cubic-bezier(.2,.8,.3,1) both 120ms">
+                    <span style="color:#fff;font-size:11px;line-height:1">✓</span>
+                  </div>
+                  <span style="font-size:14px;color:#F2F2F8">No issues on this page</span>
+                  <span onClick="{{ askExit }}" style="color:#6B697B;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;transition:color 160ms ease" style-hover="color:#F2F2F8">✕</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isBroken }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:10px;padding:0 20px;border-left:1px solid #434353;flex:none;animation:segIn 480ms cubic-bezier(.22,1,.36,1) both 120ms">
+                  <div style="display:flex"><svg width="16" height="15" viewBox="0 0 16 15" style="flex:none;display:block"><path d="M6.98 1.42a1.18 1.18 0 0 1 2.04 0l6.34 11.06c.45.79-.11 1.77-1.02 1.77H1.66c-.91 0-1.47-.98-1.02-1.77z" fill="#F6566B"></path><rect x="7.2" y="5.1" width="1.6" height="4.3" rx=".8" fill="#fff"></rect><rect x="7.2" y="10.4" width="1.6" height="1.7" rx=".8" fill="#fff"></rect></svg></div>
+                  <span title="{{ brokenText }}" style="font-size:14px;color:#fff;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ brokenText }}</span>
+                  <button onClick="{{ diagnoseSteps }}" style="margin-left:10px;border:none;background:#3D3C52;color:#F2F2F8;font-family:inherit;font-size:14px;font-weight:500;padding:0 18px;height:28px;border-radius:8px;cursor:pointer" style-hover="background:#4c4a64">Diagnose</button>
+                  <span onClick="{{ askExit }}" style="color:#6B697B;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;transition:color 160ms ease" style-hover="color:#F2F2F8">✕</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isPlain }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;padding:0 18px 0 14px">
+                  <span onClick="{{ askExit }}" style="color:#6B697B;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;transition:color 160ms ease" style-hover="color:#F2F2F8">✕</span>
+                </div>
+              </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ exitAsking }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;z-index:80;background:rgba(20,19,39,.42);display:grid;place-items:center;animation:segIn 220ms ease both">
+          <div style="width:400px;background:#fff;border-radius:12px;box-shadow:0 24px 64px rgba(20,18,40,.32);padding:26px 26px 20px;animation:barIn 280ms cubic-bezier(.22,1,.36,1) both">
+            <div style="font-size:18px;font-weight:600;color:#1f1c33">Exit preview mode?</div>
+            <div style="font-size:14px;color:#5f5a72;margin-top:9px;line-height:1.5;text-wrap:pretty">You’ll stop seeing this page as an end user. Diagnostics results for this page will be cleared.</div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:22px">
+              <button onClick="{{ cancelExit }}" style="border:1px solid #dedbe6;background:#fff;color:#1f1c33;font-family:inherit;font-size:14px;font-weight:500;padding:0 18px;height:38px;border-radius:8px;cursor:pointer" style-hover="background:#f6f5f9">Stay in preview</button>
+              <button onClick="{{ confirmExit }}" style="border:none;background:#1F1F32;color:#F2F2F8;font-family:inherit;font-size:14px;font-weight:500;padding:0 18px;height:38px;border-radius:8px;cursor:pointer" style-hover="background:#33314f">Exit preview</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;top:{{ panelTopInset }};right:0;bottom:0;width:436px;display:flex;box-shadow:-14px 0 40px rgba(20,18,40,.18);animation:panelIn 320ms cubic-bezier(.2,.7,.3,1) both;transition:top 300ms cubic-bezier(.22,1,.36,1)">
+          <div style="width:46px;background:#1c1a3c;display:flex;flex-direction:column;align-items:center;padding:14px 0 12px;gap:10px">
+            <div style="width:24px;height:24px;position:relative;margin-bottom:8px">
+              <div style="position:absolute;left:0;top:0;width:9px;height:16px;background:#f26a1b;border-radius:2px"></div>
+              <div style="position:absolute;left:11px;top:5px;width:9px;height:9px;background:#f26a1b;border-radius:2px"></div>
+              <div style="position:absolute;left:6px;top:18px;width:12px;height:2px;background:#fff"></div>
+            </div>
+            <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+            <div onClick="{{ showStudio }}" title="active" style="position:relative;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;cursor:pointer;transition:background 180ms ease;background:rgba(242,106,27,.18)">
+              <div style="position:absolute;left:-6px;top:8px;width:3px;height:18px;border-radius:0 2px 2px 0;background:#f26a1b"></div>
+              <div style="position:relative;width:16px;height:16px"><div style="position:absolute;top:7px;left:0;width:16px;height:2px;border-radius:1px;background:#f26a1b"></div><div style="position:absolute;left:7px;top:0;width:2px;height:16px;border-radius:1px;background:#f26a1b"></div></div>
+            </div>
+            <div onClick="{{ diagnose }}" title="" style="position:relative;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;cursor:pointer;transition:background 180ms ease;background:transparent" style-hover="background:rgba(255,255,255,.08)">
+              
+              <div style="position:relative;width:16px;height:16px"><div style="position:absolute;left:0;top:0;width:11px;height:11px;border:2px solid #8f8cb5;border-radius:50%"></div><div style="position:absolute;left:10px;top:10px;width:7px;height:2px;border-radius:1px;background:#8f8cb5;transform:rotate(45deg)"></div></div>
+            </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ diagnosticsActive }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+            <div onClick="{{ showStudio }}" title="" style="position:relative;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;cursor:pointer;transition:background 180ms ease;background:transparent" style-hover="background:rgba(255,255,255,.08)">
+              
+              <div style="position:relative;width:16px;height:16px"><div style="position:absolute;top:7px;left:0;width:16px;height:2px;border-radius:1px;background:#8f8cb5"></div><div style="position:absolute;left:7px;top:0;width:2px;height:16px;border-radius:1px;background:#8f8cb5"></div></div>
+            </div>
+            <div onClick="{{ diagnose }}" title="active" style="position:relative;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;cursor:pointer;transition:background 180ms ease;background:rgba(242,106,27,.18)">
+              <div style="position:absolute;left:-6px;top:8px;width:3px;height:18px;border-radius:0 2px 2px 0;background:#f26a1b"></div>
+              <div style="position:relative;width:16px;height:16px"><div style="position:absolute;left:0;top:0;width:11px;height:11px;border:2px solid #f26a1b;border-radius:50%"></div><div style="position:absolute;left:10px;top:10px;width:7px;height:2px;border-radius:1px;background:#f26a1b;transform:rotate(45deg)"></div></div>
+            </div>
+              </div>
+            </sc-if>
+            <div style="margin-top:auto;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;cursor:pointer;transition:background 180ms ease" style-hover="background:rgba(255,255,255,.08)">
+              <div style="width:17px;height:14px;border:2px solid #8f8cb5;border-right-color:transparent;border-radius:3px"></div>
+            </div>
+          </div>
+
+          <div style="flex:1;background:#fff;display:flex;flex-direction:column;overflow:hidden">
+
+            <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:none;background:#fdece0;padding:18px 22px 26px;position:relative;overflow:hidden">
+                <div style="display:flex;justify-content:flex-end;gap:14px;color:#5a5470;font-size:15px;position:relative;z-index:2">
+                  <span style="cursor:pointer">⋮</span>
+                  <span onClick="{{ closePanel }}" style="cursor:pointer">✕</span>
+                </div>
+                <div style="font-size:23px;line-height:1.28;font-weight:700;color:#1f1c33;max-width:280px;margin-top:6px;position:relative;z-index:2">
+                  <span style="color:#f26a1b">Studio:</span> Guide. Track. Get feedback. In context. All in one place.
+                </div>
+                <div style="position:absolute;right:-30px;top:20px;width:150px;height:140px">
+                  <div style="position:absolute;right:34px;top:6px;width:74px;height:74px;border-radius:50%;background:#f6c3ae"></div>
+                  <div style="position:absolute;right:0;top:0;width:52px;height:52px;background:#5a7fd6;clip-path:polygon(0 0,100% 0,100% 100%)"></div>
+                  <div style="position:absolute;right:52px;top:36px;width:34px;height:34px;background:#f4801f;transform:rotate(45deg)"></div>
+                  <div style="position:absolute;right:14px;top:78px;width:52px;height:44px;background:#8c2340;clip-path:polygon(50% 0,100% 100%,0 100%)"></div>
+                </div>
+              </div>
+              <div style="flex:none;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                <span style="font-size:15px;color:#1f1c33">J&amp;J_Salesforce_dem..</span>
+                <div onClick="{{ togglePreview }}" style="display:flex;align-items:center;gap:10px;background:#f4f5f8;border-radius:22px;padding:7px 10px 7px 16px;cursor:pointer">
+                  <span style="font-size:14px;color:#1f1c33">Preview mode</span>
+                  <div style="width:38px;height:21px">
+                    <sc-if value="{{ previewOn }}" hint-placeholder-val="{{ true }}">
+                      <div style="width:38px;height:21px;border-radius:11px;background:#1a73e8;display:flex;justify-content:flex-end;align-items:center;padding:2px;box-sizing:border-box">
+                        <div style="width:17px;height:17px;border-radius:50%;background:#fff"></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ previewOff }}" hint-placeholder-val="{{ true }}">
+                      <div style="width:38px;height:21px;border-radius:11px;background:#d3d6dd;display:flex;align-items:center;padding:2px;box-sizing:border-box">
+                        <div style="width:17px;height:17px;border-radius:50%;background:#fff"></div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+              <div style="flex:1;min-height:0;padding:4px 22px 24px;overflow-y:auto">
+                <div style="font-size:14px;color:#5a5470;margin-bottom:12px">Content</div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="position:relative;width:20px;height:20px"><div style="position:absolute;left:9px;top:0;width:2px;height:20px;background:#4a4568"></div><div style="position:absolute;left:0;top:3px;width:11px;height:7px;border:1.6px solid #4a4568"></div><div style="position:absolute;left:9px;top:12px;width:11px;height:6px;border:1.6px solid #4a4568"></div></div>
+                    <span style="font-size:13.5px;color:#1f1c33">Flow</span>
+                  </div>
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="position:relative;width:20px;height:20px"><div style="position:absolute;left:1px;top:6px;width:10px;height:8px;border:1.8px solid #4a4568;border-radius:5px"></div><div style="position:absolute;left:9px;top:6px;width:10px;height:8px;border:1.8px solid #4a4568;border-radius:5px"></div></div>
+                    <span style="font-size:13.5px;color:#1f1c33">Link</span>
+                  </div>
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="width:19px;height:19px;border:1.8px solid #4a4568;border-radius:50%;display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-left:6px solid #4a4568;border-top:4px solid transparent;border-bottom:4px solid transparent;margin-left:2px"></div></div>
+                    <span style="font-size:13.5px;color:#1f1c33">Video</span>
+                  </div>
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="width:19px;height:16px;border:1.8px solid #4a4568;border-radius:2px;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:0 3px"><div style="height:1.6px;background:#4a4568"></div><div style="height:1.6px;background:#4a4568;width:70%"></div></div>
+                    <span style="font-size:13.5px;color:#1f1c33">Text</span>
+                  </div>
+                </div>
+                <div style="font-size:14px;color:#5a5470;margin:26px 0 12px">Widgets</div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="width:19px;height:19px;border:1.8px solid #4a4568;border-radius:50%;display:flex;align-items:center;justify-content:center"><div style="width:7px;height:7px;border-radius:50%;background:#4a4568"></div></div>
+                    <span style="font-size:13.5px;color:#1f1c33">Beacon</span>
+                  </div>
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="width:18px;height:16px;border:1.8px solid #4a4568;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#4a4568;font-weight:700">i</div>
+                    <span style="font-size:13.5px;color:#1f1c33">Smart-tip</span>
+                  </div>
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="width:19px;height:16px;border:1.8px solid #4a4568;border-radius:2px;display:flex;flex-direction:column"><div style="height:4px;background:#4a4568"></div></div>
+                    <span style="font-size:13.5px;color:#1f1c33">Popup</span>
+                  </div>
+                  <div style="border:1px solid #e4e2ec;border-radius:8px;padding:18px 0 14px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer" style-hover="border-color:#b9b6c9">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="display:flex;gap:3px"><div style="width:4px;height:4px;border-radius:50%;background:#4a4568"></div><div style="width:4px;height:4px;border-radius:50%;background:#4a4568"></div><div style="width:4px;height:4px;border-radius:50%;background:#4a4568"></div></div><div style="width:19px;height:7px;border:1.8px solid #4a4568;border-radius:2px"></div></div>
+                    <span style="font-size:13.5px;color:#1f1c33">Launchers</span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isDiagnostics }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:none;padding:20px 22px 0;display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:21px;font-weight:600;color:#1f1c33">Diagnostics</div>
+                <div style="display:flex;gap:16px;color:#5a5470;font-size:15px">
+                  <span style="cursor:pointer">⋮</span>
+                  <span onClick="{{ closePanel }}" style="cursor:pointer">✕</span>
+                </div>
+              </div>
+              <div style="flex:none;padding:22px 22px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                <span style="font-size:15px;color:#1f1c33">J&amp;J_Salesforce_dem..</span>
+                <div onClick="{{ togglePreview }}" style="display:flex;align-items:center;gap:10px;background:#f4f5f8;border-radius:22px;padding:7px 10px 7px 16px;cursor:pointer">
+                  <span style="font-size:14px;color:#1f1c33">Preview mode</span>
+                  <div style="width:38px;height:21px;border-radius:11px;background:#1a73e8;display:flex;justify-content:flex-end;align-items:center;padding:2px;box-sizing:border-box">
+                    <div style="width:17px;height:17px;border-radius:50%;background:#fff"></div>
+                  </div>
+                </div>
+              </div>
+              <div style="flex:none;padding:0 22px 16px;display:flex;align-items:center;gap:12px">
+                <div style="flex:1;display:flex;align-items:center;gap:10px;border:1px solid #dedbe6;border-radius:8px;padding:11px 14px">
+                  <div style="position:relative;width:15px;height:15px"><div style="position:absolute;width:10px;height:10px;border:1.7px solid #7a7590;border-radius:50%"></div><div style="position:absolute;left:9px;top:9px;width:6px;height:1.7px;background:#7a7590;transform:rotate(45deg)"></div></div>
+                  <span style="font-size:13.5px;color:#8b87a0">Search content on this page</span>
+                </div>
+                <div style="width:40px;height:40px;border:1px solid #dedbe6;border-radius:8px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 9px;cursor:pointer">
+                  <div style="position:relative;height:1.6px;background:#4a4568"><div style="position:absolute;left:3px;top:-2px;width:5px;height:5px;border-radius:50%;background:#4a4568"></div></div>
+                  <div style="position:relative;height:1.6px;background:#4a4568"><div style="position:absolute;right:4px;top:-2px;width:5px;height:5px;border-radius:50%;background:#4a4568"></div></div>
+                </div>
+              </div>
+              <div style="flex:none;margin:0 22px 6px;background:#f2f2f6;border-radius:22px;padding:4px;display:grid;grid-template-columns:1fr 1fr">
+                <div style="background:#2b2850;color:#fff;border-radius:20px;padding:9px 0;text-align:center;font-size:13.5px;font-weight:600;cursor:pointer">On this page</div>
+                <div style="color:#4a4568;border-radius:20px;padding:9px 0;text-align:center;font-size:13.5px;cursor:pointer">Not on this page</div>
+              </div>
+              <div style="flex:1;min-height:0;overflow-y:auto;padding:8px 0 22px">
+                <div onClick="{{ playFlow }}" style="display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid #eeecf2;cursor:pointer" style-hover="background:#faf9fc">
+                  <div style="position:relative;width:22px;height:22px;flex:none"><div style="position:absolute;left:10px;top:0;width:2px;height:22px;background:#4a4568"></div><div style="position:absolute;left:0;top:3px;width:12px;height:7px;border:1.6px solid #4a4568"></div><div style="position:absolute;left:10px;top:13px;width:12px;height:7px;border:1.6px solid #4a4568"></div></div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:600;color:#1f1c33">Flows</div>
+                    <div style="font-size:13px;color:#6f6a85;margin-top:2px">Play a flow to check every step</div>
+                  </div>
+                  <span style="color:#6f6a85;font-size:13px">⌄</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid #eeecf2;cursor:pointer" style-hover="background:#faf9fc">
+                  <div style="width:20px;height:17px;border:1.8px solid #4a4568;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#4a4568;flex:none">i</div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:600;color:#1f1c33">Smart tips</div>
+                    <div style="font-size:13px;color:#3f8b57;margin-top:2px">All 6 showing on this page</div>
+                  </div>
+                  <span style="color:#6f6a85;font-size:13px">⌄</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid #eeecf2;cursor:pointer" style-hover="background:#faf9fc">
+                  <div style="width:20px;height:20px;border:1.8px solid #4a4568;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none"><div style="width:8px;height:8px;border-radius:50%;background:#4a4568"></div></div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:600;color:#1f1c33">Beacons</div>
+                    <div style="font-size:13px;color:#3f8b57;margin-top:2px">All 4 showing on this page</div>
+                  </div>
+                  <span style="color:#6f6a85;font-size:13px">⌄</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid #eeecf2;cursor:pointer" style-hover="background:#faf9fc">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none;width:22px"><div style="display:flex;gap:3px"><div style="width:4px;height:4px;border-radius:50%;background:#4a4568"></div><div style="width:4px;height:4px;border-radius:50%;background:#4a4568"></div><div style="width:4px;height:4px;border-radius:50%;background:#4a4568"></div></div><div style="width:20px;height:8px;border:1.8px solid #4a4568;border-radius:2px"></div></div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:600;color:#1f1c33">Launchers</div>
+                    <div style="font-size:13px;color:#c0392b;margin-top:2px">2 won’t show to users</div>
+                  </div>
+                  <span style="color:#6f6a85;font-size:13px">⌄</span>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isSteps }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:none;padding:20px 22px 0;display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:21px;font-weight:600;color:#1f1c33">Diagnostics</div>
+                <div style="display:flex;gap:16px;color:#5a5470;font-size:15px">
+                  <span style="cursor:pointer">⋮</span>
+                  <span onClick="{{ closePanel }}" style="cursor:pointer">✕</span>
+                </div>
+              </div>
+              <div title="{{ stepsTitle }}" style="flex:none;padding:22px 22px 16px;font-size:15px;font-weight:600;color:#1f1c33;line-height:1.35;text-wrap:pretty">{{ stepsTitle }}</div>
+              <div style="flex:1;min-height:0;overflow-y:auto;padding:0 22px 22px;display:flex;flex-direction:column;gap:12px">
+                <div style="flex:none;border-radius:10px;background:#f6f5f9;overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:14px;padding:14px 16px">
+                    <div style="width:30px;height:30px;border-radius:50%;background:#e6f4ea;color:#1f1c33;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;flex:none">{{ doneStep }}</div>
+                    <div style="flex:1;min-width:0;font-size:14.5px;color:#1f1c33;text-wrap:pretty">Complete your profile</div>
+                    <span style="font-size:12.5px;color:#1e8e3e;font-weight:600">Working</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#eef7f0">
+                    <span style="color:#1e8e3e;font-size:14px">✓</span>
+                    <span style="font-size:14px;font-weight:600;color:#1f1c33">Shown in the right place</span>
+                  </div>
+                </div>
+                <div style="flex:none;border:1.5px solid #e2483d;border-radius:10px;overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:14px;padding:14px 16px">
+                    <div style="width:30px;height:30px;border-radius:50%;background:#fbe3e0;color:#1f1c33;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;flex:none">{{ failStep }}</div>
+                    <div style="flex:1;min-width:0;font-size:14.5px;color:#1f1c33;text-wrap:pretty">{{ failStepLabel }}</div>
+                    <span style="font-size:12.5px;color:#c0392b;font-weight:600">Not working</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fdeeec">
+                    <span style="color:#c0392b;font-size:14px">✕</span>
+                    <span style="font-size:14px;font-weight:600;color:#c0392b">We can’t find the link this step points to</span>
+                  </div>
+                </div>
+                <sc-for list="{{ pendingSteps }}" as="step" hint-placeholder-count="5">
+                  <div style="flex:none;border:1px dashed #d8d5e2;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:14px">
+                    <div style="width:30px;height:30px;border-radius:50%;background:#f4f3f8;color:#4a4568;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;flex:none">{{ step.n }}</div>
+                    <div style="font-size:14.5px;color:#6f6a85">{{ step.label }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { bar: 'hidden', panel: 'studio', previewOn: false, fading: false, closing: false, step: 1, selfHelpOpen: false, barHover: false };
+
+  flow() {
+    const long = 'Onboarding new users — profile setup, skills, endorsements and sharing walkthrough (EMEA, Q3 2026)';
+    return { name: this.state.longName ? long : 'Onboarding new users', total: 5, failAt: 3 };
+  }
+
+  stop() {
+    if (this.ta) { clearTimeout(this.ta); this.ta = null; }
+    if (this.tb) { clearTimeout(this.tb); this.tb = null; }
+  }
+  componentWillUnmount() { this.stop(); window.removeEventListener('resize', this.clampPos); }
+
+  jump(patch) { this.stop(); this.setState(Object.assign({ fading: false, closing: false }, patch)); }
+
+  fadeTo(patch) {
+    this.stop();
+    this.setState({ fading: true });
+    this.tb = setTimeout(() => this.setState(Object.assign({ fading: false, closing: false }, patch)), 460);
+  }
+
+  hideBar = () => {
+    if (this.state.bar === 'hidden') return;
+    this.stop();
+    this.setState({ fading: true, closing: true });
+    this.tb = setTimeout(() => this.setState({ bar: 'hidden', previewOn: false, fading: false, closing: false }), 560);
+  };
+
+  togglePreview = () => {
+    if (this.state.previewOn) { this.hideBar(); return; }
+    this.jump({ previewOn: true, bar: 'checking' });
+    this.ta = setTimeout(() => this.fadeTo({ bar: 'issues' }), 3000);
+  };
+
+  openThenSettle = (panel) => {
+    this.stop();
+    this.setState({ panel: panel, previewOn: true });
+    this.ta = setTimeout(() => this.fadeTo({ bar: 'plain' }), 420);
+  };
+
+  // while a flow plays the bar stays in its default state; it speaks up only on failure
+  playFlow = () => {
+    this.fadeTo({ panel: 'closed', bar: 'plain', previewOn: true, playing: true, step: 1, selfHelpOpen: false });
+  };
+
+  nextStep = () => {
+    const F = this.flow();
+    const next = this.state.step + 1;
+    this.stop();
+    this.setState({ step: next });
+    if (next >= F.failAt) this.ta = setTimeout(() => this.fadeTo({ bar: 'broken', playing: false }), 900);
+  };
+
+  // drag the bar anywhere inside the app viewport; released position is kept
+  startDrag = (e) => {
+    e.preventDefault();
+    this.grip = e.currentTarget;
+    const wrap = e.currentTarget.parentNode;
+    const stage = wrap.closest('div[style*="overflow: hidden"]') || wrap.offsetParent;
+    const r = wrap.getBoundingClientRect();
+    const s = stage.getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = (ev) => {
+      const x = Math.min(Math.max(ev.clientX - s.left - dx, 8), s.width - r.width - 8);
+      const y = Math.min(Math.max(ev.clientY - s.top - dy, 8), s.height - r.height - 8);
+      this.setState({ pos: { x: x, y: y }, dragging: true });
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      this.setState({ dragging: false });
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  // keep a dragged bar fully inside the app viewport when its content or the window changes
+  clampPos = () => {
+    if (!this.state.pos || !this.grip) return;
+    const wrap = this.grip.parentNode;
+    const stage = wrap.closest('div[style*="overflow: hidden"]') || wrap.offsetParent;
+    if (!stage) return;
+    const r = wrap.getBoundingClientRect(), st = stage.getBoundingClientRect();
+    const x = Math.min(Math.max(this.state.pos.x, 8), Math.max(8, st.width - r.width - 8));
+    const y = Math.min(Math.max(this.state.pos.y, 8), Math.max(8, st.height - r.height - 8));
+    if (x !== this.state.pos.x || y !== this.state.pos.y) this.setState({ pos: { x: x, y: y } });
+  };
+
+  componentDidMount() { window.addEventListener('resize', this.clampPos); }
+  componentDidUpdate() { if (!this.state.dragging) this.clampPos(); }
+
+  renderVals() {
+    const s = this.state;
+    const p = s.pos;
+    const F = this.flow();
+    const go = (bar, panel, on) => () => this.jump({ bar: bar, panel: panel, previewOn: on !== false });
+    return {
+      previewOn: s.previewOn, previewOff: !s.previewOn,
+      barVisible: s.bar !== 'hidden',
+      segOpacity: s.fading ? 0 : 1,
+      segMax: s.fading ? '0px' : '520px',
+      barAnim: s.closing ? 'barOut 540ms cubic-bezier(.4,0,.2,1) both' : 'barIn 560ms cubic-bezier(.22,1,.36,1) both',
+      barAttn: (s.bar === 'issues' || s.bar === 'broken') ? 'nudge 620ms cubic-bezier(.3,.8,.3,1) both, attn 1500ms ease-in-out 3' : 'none',
+      handleOpacity: (s.barHover || s.dragging) ? 1 : 0,
+      barLeft: p ? p.x + 'px' : '0px',
+      barTop: p ? p.y + 'px' : '10px',
+      barRightEdge: p ? 'auto' : '0px',
+      barMargin: p ? '0' : '0 auto',
+      dragCursor: s.dragging ? 'grabbing' : 'grab',
+      startDrag: this.startDrag,
+      barEnter: () => { if (!this.state.barHover) this.setState({ barHover: true }); },
+      barLeave: () => { if (this.state.barHover) this.setState({ barHover: false }); },
+      isChecking: s.bar === 'checking', isIssues: s.bar === 'issues',
+      isBroken: s.bar === 'broken', isPlain: s.bar === 'plain',
+      isClean: s.bar === 'clean',
+      panelOpen: s.panel !== 'closed',
+      isStudio: s.panel === 'studio', isDiagnostics: s.panel === 'diagnostics', isSteps: s.panel === 'steps',
+      diagnosticsActive: s.panel === 'diagnostics' || s.panel === 'steps',
+      controlsOpen: s.controlsOpen !== false,
+      controlsClosed: s.controlsOpen === false,
+      hideControls: () => this.setState({ controlsOpen: false }),
+      showControls: () => this.setState({ controlsOpen: true }),
+      togglePreview: this.togglePreview,
+      closeBar: this.hideBar,
+      askExit: () => this.setState({ exitAsking: true }),
+      cancelExit: () => this.setState({ exitAsking: false }),
+      confirmExit: () => { this.setState({ exitAsking: false, playing: false }); this.hideBar(); },
+      exitAsking: !!s.exitAsking,
+      closePanel: () => this.jump({ panel: 'closed' }),
+      showStudio: () => this.jump({ panel: 'studio' }),
+      diagnose: () => this.openThenSettle('diagnostics'),
+      diagnoseSteps: () => this.openThenSettle('steps'),
+      playFlow: this.playFlow,
+      nextStep: this.nextStep,
+      onStep1: s.playing && s.step === 1,
+      onStep2: s.playing && s.step === 2,
+      toggleSelfHelp: () => this.setState({ selfHelpOpen: !this.state.selfHelpOpen }),
+      closeSelfHelp: () => this.setState({ selfHelpOpen: false }),
+      selfHelpOpen: s.selfHelpOpen,
+      // keep the panel's header clear of the always-top-centre bar
+      panelTopInset: (s.bar !== 'hidden' && !s.pos) ? '58px' : '0px',
+      flowName: F.name,
+      toggleLongName: () => this.setState({ longName: !s.longName }),
+      longNameLabel: s.longName ? 'LONG NAME ON' : 'LONG NAME',
+      playingText: 'Playing “' + F.name + '” · step ' + s.step + ' of ' + F.total,
+      brokenText: 'Step ' + F.failAt + ' isn’t working · “' + F.name + '”',
+      stepsTitle: F.name + ' · ' + F.total + ' steps',
+      doneStep: F.failAt - 1,
+      failStep: F.failAt,
+      failStepLabel: 'Open \u201CSkills & endorsements\u201D',
+      pendingSteps: [
+        { n: 4, label: 'Add a skill to your profile' },
+        { n: 5, label: 'Save and share your profile' }
+      ],
+      states: [
+        { label: '01 · Studio, preview off', go: go('hidden', 'studio', false) },
+        { label: '02 · Checking for issues', go: go('checking', 'studio') },
+        { label: '03 · Issues found', go: go('issues', 'studio') },
+        { label: '03b · No issues', go: go('clean', 'studio') },
+        { label: '04 · Issues, panel closed', go: go('issues', 'closed') },
+        { label: '05 · Diagnostics', go: go('plain', 'diagnostics') },
+        { label: '06 · Play 5-step flow', go: this.playFlow },
+        { label: '07 · Step 3 failed', go: go('broken', 'closed') },
+        { label: '08 · Step diagnostics', go: go('plain', 'steps') }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
